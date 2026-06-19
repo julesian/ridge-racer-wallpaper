@@ -1,6 +1,6 @@
 # Ridge Racer Type 4 Track Wallpaper
 
-https://github.com/user-attachments/assets/cc8a2561-fa78-460a-9b8c-61d0a002c759
+https://github.com/user-attachments/assets/a0f750c8-fabe-4916-a8d1-fe1832210de7
 
 A Ridge Racer Type 4 inspired animated web wallpaper
 
