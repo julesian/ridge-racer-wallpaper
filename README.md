@@ -11,9 +11,10 @@ Open `index.html` in a browser, or serve the folder with any static server.
 ## Project structure
 
 - `index.html`, `styles.css`, and `script.js` are the wallpaper runtime.
-- `assets/r4-logo.svg`, `assets/spiral-ahead.mp3`, track route files in `assets/track-vector/`, and `assets/tracks.js` are loaded by the wallpaper.
+- `assets/r4-logo-tight.svg`, `assets/spiral-ahead.mp3`, track route files in `assets/track-vector/`, and `assets/tracks.js` are loaded by the wallpaper.
+- `assets/tracks/wonderhill/` and `assets/tracks/shooting-hoops/` contain each track's layout, logo, and remastered image assets.
 - `assets/track-vector/wonderhill-route.json` and `.svg` mirror the runtime route for inspection.
-- `tools/` contains one-off extraction scripts for rebuilding route assets from reference screenshots.
+- `tools/` contains the Wonderhill and Shooting HooPs route builders.
 
 ## Tracks
 
@@ -24,8 +25,8 @@ Tracks are registered in `assets/tracks.js`. Each entry owns the display name, c
   id: "wonderhill-jpn",
   name: "Wonderhill",
   country: "JPN",
-  imageAsset: "wonderhill-remastered-borderless-orange-wave.png",
-  logoAsset: "assets/wonderhill-logo-square.png",
+  imageAsset: "assets/tracks/wonderhill/wonderhill-remastered-borderless-orange-wave.png",
+  logoAsset: "assets/tracks/wonderhill/wonderhill-logo-square.png",
   route: window.TRACK_ROUTE_WONDERHILL,
   startGrid: {
     point: [388.5, 493.5],
@@ -68,7 +69,7 @@ The generated `wonderhill-route.js` is the only route file required by the live 
 Shooting HooPs can be rebuilt from its layout image with:
 
 ```text
-python tools/build_shooting_hoops_route.py assets/tracks/shooting-hoops-layout.png
+python tools/build_shooting_hoops_route.py assets/tracks/shooting-hoops/shooting-hoops-layout.png
 ```
 
 Codex take the Wheel
