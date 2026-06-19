@@ -12,17 +12,30 @@
   const music = document.getElementById("music");
   const muteToggle = document.getElementById("muteToggle");
   const muteIndicator = document.getElementById("muteIndicator");
+  const courseName = document.getElementById("courseName");
   const scaleValue = document.getElementById("scaleValue");
   const scaleSteps = Array.from(document.querySelectorAll(".scale-step"));
   const logoToggle = document.getElementById("logoToggle");
+  const trackSelectToggle = document.getElementById("trackSelectToggle");
+  const trackSelectors = document.getElementById("trackSelectors");
+  const trackArrowButtons = Array.from(document.querySelectorAll(".track-arrow"));
   const bottomLogo = document.getElementById("bottomLogo");
+  const trackLogo = bottomLogo ? bottomLogo.querySelector(".wonderhill-logo") : null;
 
   const TAU = Math.PI * 2;
   const DESIGN_VIEWPORT = {
     width: 1366,
     height: 768,
   };
+  const SCALE_REFERENCE_TRACK = {
+    width: 888,
+    height: 597,
+  };
   const CONTENT_ZOOM = 1.08;
+  const PROJECTION_BAND_ROWS = 0;
+  const GREY_FIELD_OFFSET_ROWS = 3;
+  const COLUMNS_PER_GRID_ROW = 2;
+  const LOWER_RHOMBUS_LIFT_ROWS = 3;
   const SCENE_OFFSET = {
     x: 39,
     y: 0,
@@ -44,17 +57,20 @@
   let routeLengths = [];
   let totalRouteLength = 1;
   let planeHalfWidth = 1;
+  let projectionGeometry = null;
   let lastRenderTime = -Infinity;
   let routeLayerDirty = true;
+  let animationStartTime = null;
 
   const FRAME_INTERVAL = 1000 / 24;
   const PIXEL_SCALE = 3;
   const settings = {
     scale: readStoredScale(),
     logo: readStoredLogo(),
+    trackSelect: readStoredTrackSelect(),
     muted: readStoredMuted(),
   };
-  const fallbackTrack = {
+  const fallbackRoute = {
     width: 888,
     height: 597,
     smooth: true,
@@ -107,8 +123,21 @@
       [445, 513],
     ],
   };
-  const importedTrack = sanitizeTrackData(window.TRACK_ROUTE_CLEAN_TRACE);
-  const trackData = importedTrack || fallbackTrack;
+  const fallbackTrack = {
+    id: "fallback",
+    name: "Wonderhill",
+    country: "JPN",
+    imageAsset: "wonderhill-remastered-borderless-orange-wave.png",
+    logoAsset: "assets/wonderhill-logo-square.png",
+    route: fallbackRoute,
+    startGrid: {
+      point: [388.5, 493.5],
+    },
+  };
+  const trackCatalog = buildTrackCatalog(window.R4_TRACKS);
+  let activeTrackIndex = 0;
+  let activeTrack = trackCatalog[activeTrackIndex];
+  let trackData = activeTrack.route;
 
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -125,14 +154,18 @@
   }
 
   function rebuildScene() {
-    const viewportFit = Math.min(width / trackData.width, height / trackData.height);
+    const viewportFit = Math.min(
+      width / SCALE_REFERENCE_TRACK.width,
+      height / SCALE_REFERENCE_TRACK.height
+    );
     const designFit = Math.min(
-      DESIGN_VIEWPORT.width / trackData.width,
-      DESIGN_VIEWPORT.height / trackData.height
+      DESIGN_VIEWPORT.width / SCALE_REFERENCE_TRACK.width,
+      DESIGN_VIEWPORT.height / SCALE_REFERENCE_TRACK.height
     );
     baseScale = Math.min(viewportFit, designFit) * CONTENT_ZOOM * settings.scale;
     buildRoute();
     buildHexField();
+    syncTrackSelectorGeometry();
   }
 
   function resizePixelCanvas() {
@@ -149,9 +182,10 @@
   }
 
   function mapPoint(x, y) {
+    const routeScale = activeTrack.routeScale || 1;
     return {
-      x: width * 0.5 + (x - trackData.width * 0.5 + SCENE_OFFSET.x) * baseScale,
-      y: height * 0.5 + (y - trackData.height * 0.5 + SCENE_OFFSET.y) * baseScale,
+      x: width * 0.5 + ((x - trackData.width * 0.5) * routeScale + SCENE_OFFSET.x) * baseScale,
+      y: height * 0.5 + ((y - trackData.height * 0.5) * routeScale + SCENE_OFFSET.y) * baseScale,
     };
   }
 
@@ -160,7 +194,7 @@
     if (mapped.length > 2 && distance(mapped[0], mapped[mapped.length - 1]) < 2 * baseScale) {
       mapped = mapped.slice(0, -1);
     }
-    route = trackData.smooth ? smoothClosedPath(mapped, 10) : mapped;
+    route = trackData.smooth ? smoothClosedPath(mapped, 10) : mapped.concat([mapped[0]]);
     routeLengths = [0];
     totalRouteLength = 0;
     for (let i = 1; i < route.length; i += 1) {
@@ -170,16 +204,47 @@
     routeLayerDirty = true;
   }
 
-  function sanitizeTrackData(data) {
+  function buildTrackCatalog(tracks) {
+    const sourceTracks = Array.isArray(tracks) && tracks.length ? tracks : [fallbackTrack];
+    const sanitizedTracks = sourceTracks
+      .map((track) => {
+        const routeData = sanitizeTrackData(track.route || track.data || track, track);
+        if (!routeData) return null;
+
+        return {
+          id: track.id || slugifyTrackName(track.name || "track"),
+          name: track.name || "Unnamed Track",
+          country: track.country || "",
+          imageAsset: track.imageAsset || "",
+          logoAsset: track.logoAsset || "",
+          routeScale: Number.isFinite(track.routeScale) ? track.routeScale : 1,
+          startGrid: track.startGrid || null,
+          route: routeData,
+        };
+      })
+      .filter(Boolean);
+
+    return sanitizedTracks.length ? sanitizedTracks : [{ ...fallbackTrack, route: sanitizeTrackData(fallbackRoute, fallbackTrack) }];
+  }
+
+  function slugifyTrackName(name) {
+    return String(name)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function sanitizeTrackData(data, track) {
     if (!data || !Array.isArray(data.points) || data.points.length < 2) return null;
 
     let points = data.points;
     if (points.length > 500) {
-      const startIndex = points.findIndex(([x, y]) => x >= 386 && x <= 390 && y >= 492 && y <= 495);
-      const endIndex = findLastIndex(
-        points,
-        ([x, y]) => x >= 386 && x <= 390 && y >= 492 && y <= 495
-      );
+      const startPoint = track && track.startGrid && track.startGrid.point;
+      const isStartGridPoint = startPoint
+        ? ([x, y]) => Math.hypot(x - startPoint[0], y - startPoint[1]) <= 3
+        : ([x, y]) => x >= 386 && x <= 390 && y >= 492 && y <= 495;
+      const startIndex = points.findIndex(isStartGridPoint);
+      const endIndex = findLastIndex(points, isStartGridPoint);
 
       if (startIndex >= 0 && endIndex > startIndex + 300) {
         points = points.slice(startIndex, endIndex + 1);
@@ -193,11 +258,90 @@
     }
 
     return {
-      width: data.width || fallbackTrack.width,
-      height: data.height || fallbackTrack.height,
+      width: data.width || fallbackRoute.width,
+      height: data.height || fallbackRoute.height,
+      smooth: data.smooth !== false,
       points,
     };
   }
+
+  function setActiveTrack(index) {
+    if (!trackCatalog.length) return;
+    activeTrackIndex = ((index % trackCatalog.length) + trackCatalog.length) % trackCatalog.length;
+    activeTrack = trackCatalog[activeTrackIndex];
+    trackData = activeTrack.route;
+    animationStartTime = null;
+    lastRenderTime = -Infinity;
+    syncTrackInfo();
+    rebuildScene();
+  }
+
+  function syncTrackInfo() {
+    if (courseName) courseName.textContent = formatTrackName(activeTrack);
+    if (trackLogo && activeTrack.logoAsset) {
+      trackLogo.src = activeTrack.logoAsset;
+      trackLogo.alt = formatTrackName(activeTrack);
+    }
+  }
+
+  function formatTrackName(track) {
+    return track.country ? `${track.name} [${track.country}]` : track.name;
+  }
+
+  function syncTrackSelectorGeometry() {
+    if (!trackSelectors) return;
+    const center = lowerPlaneCenter();
+    const distance = Math.min(
+      width * 0.47,
+      Math.max(130, 310 + 240 * settings.scale)
+    );
+    document.documentElement.style.setProperty("--track-selector-center-x", `${Math.round(center.x)}px`);
+    document.documentElement.style.setProperty("--track-selector-distance", `${Math.round(distance)}px`);
+  }
+
+  function nextTrack() {
+    setActiveTrack(activeTrackIndex + 1);
+  }
+
+  function previousTrack() {
+    setActiveTrack(activeTrackIndex - 1);
+  }
+
+  window.R4Wallpaper = {
+    get tracks() {
+      return trackCatalog.map(({ id, name, country, imageAsset, logoAsset, routeScale, startGrid }) => ({
+        id,
+        name,
+        country,
+        displayName: formatTrackName({ name, country }),
+        imageAsset,
+        logoAsset,
+        routeScale,
+        startGrid,
+      }));
+    },
+    get activeTrack() {
+      return {
+        id: activeTrack.id,
+        name: activeTrack.name,
+        country: activeTrack.country,
+        displayName: formatTrackName(activeTrack),
+        imageAsset: activeTrack.imageAsset,
+        logoAsset: activeTrack.logoAsset,
+        routeScale: activeTrack.routeScale,
+        startGrid: activeTrack.startGrid,
+      };
+    },
+    setTrack(idOrIndex) {
+      const index =
+        typeof idOrIndex === "number"
+          ? idOrIndex
+          : trackCatalog.findIndex((track) => track.id === idOrIndex);
+      if (index >= 0) setActiveTrack(index);
+    },
+    previousTrack,
+    nextTrack,
+  };
 
   function findLastIndex(items, predicate) {
     for (let i = items.length - 1; i >= 0; i -= 1) {
@@ -238,27 +382,20 @@
   }
 
   function buildHexField() {
-    hexCenters = [];
-    trackGridCenters = [];
-    const metrics = lowerPlaneMetrics();
-    planeHalfWidth = metrics.dx * metrics.halfCols;
+    const outerGridMetrics = projectionRhombusMetrics();
+    const fieldMetrics = lowerPlaneMetrics(greyFieldCenter());
+    planeHalfWidth = fieldMetrics.dx * fieldMetrics.halfCols;
 
-    const trackCols = metrics.halfCols + metrics.trackMarginCols;
-    for (let col = -trackCols; col <= trackCols; col += 1) {
-      const fieldRange = columnRowRange(col, metrics, 0);
-      const trackRange = columnRowRange(col, metrics, metrics.trackMarginRows);
-      for (let row = trackRange.min; row <= trackRange.max; row += 1) {
-        const p = axialToScreen(col, row, metrics);
-        trackGridCenters.push(p);
-        if (
-          Math.abs(col) <= metrics.halfCols &&
-          row >= fieldRange.min &&
-          row <= fieldRange.max
-        ) {
-          hexCenters.push(p);
-        }
-      }
-    }
+    trackGridCenters = buildRhombusCells(outerGridMetrics, true);
+    hexCenters = buildRhombusCells(fieldMetrics);
+
+    const fieldBounds = rhombusPolygon(fieldMetrics);
+    projectionGeometry = {
+      bounds: rhombusPolygon(outerGridMetrics),
+      fieldLeft: fieldBounds[0],
+      fieldRight: fieldBounds[2],
+      bottom: fieldBounds[3],
+    };
   }
 
   function lowerPlaneMetrics(center) {
@@ -270,13 +407,32 @@
       dy: cell * 1.78,
       halfCols: 22,
       rows: 11,
-      trackMarginCols: 6,
-      trackMarginRows: 3,
     };
   }
 
-  function columnRowRange(col, metrics, extraRows) {
-    const middleCount = metrics.rows * 2 + 1 + extraRows * 2;
+  function projectionRhombusMetrics() {
+    const metrics = lowerPlaneMetrics();
+    return {
+      ...metrics,
+      halfCols: metrics.halfCols + PROJECTION_BAND_ROWS * COLUMNS_PER_GRID_ROW,
+      rows: metrics.rows + PROJECTION_BAND_ROWS,
+    };
+  }
+
+  function buildRhombusCells(metrics, includeGridCoordinates) {
+    const cells = [];
+    for (let col = -metrics.halfCols; col <= metrics.halfCols; col += 1) {
+      const rowRange = columnRowRange(col, metrics);
+      for (let row = rowRange.min; row <= rowRange.max; row += 1) {
+        const point = axialToScreen(col, row, metrics);
+        cells.push(includeGridCoordinates ? { ...point, col, row } : point);
+      }
+    }
+    return cells;
+  }
+
+  function columnRowRange(col, metrics) {
+    const middleCount = metrics.rows * 2 + 1;
     const count = Math.max(1, middleCount - Math.abs(col));
     const min = -Math.floor(count / 2);
     return {
@@ -294,34 +450,28 @@
   }
 
   function lowerPlaneCenter() {
-    if (route.length < 2) return mapPoint(686, 387);
-    const bounds = polygonBounds(route);
+    const rowHeight = 7.95 * baseScale * 1.78;
     return {
-      x: (bounds.minX + bounds.maxX) * 0.5,
-      y: (bounds.minY + bounds.maxY) * 0.5,
+      x: width * 0.5,
+      y: height * 0.5 - rowHeight * LOWER_RHOMBUS_LIFT_ROWS,
     };
   }
 
-  function lowerPlanePolygon(center) {
-    const metrics = lowerPlaneMetrics(center);
+  function greyFieldCenter() {
+    const metrics = lowerPlaneMetrics();
+    return {
+      x: metrics.center.x,
+      y: metrics.center.y + metrics.dy * GREY_FIELD_OFFSET_ROWS,
+    };
+  }
+
+  function rhombusPolygon(metrics) {
     return [
       { x: metrics.center.x - metrics.dx * metrics.halfCols, y: metrics.center.y },
       { x: metrics.center.x, y: metrics.center.y - metrics.dy * metrics.rows },
       { x: metrics.center.x + metrics.dx * metrics.halfCols, y: metrics.center.y },
       { x: metrics.center.x, y: metrics.center.y + metrics.dy * metrics.rows },
     ];
-  }
-
-  function polygonBounds(polygon) {
-    return polygon.reduce(
-      (bounds, p) => ({
-        minX: Math.min(bounds.minX, p.x),
-        maxX: Math.max(bounds.maxX, p.x),
-        minY: Math.min(bounds.minY, p.y),
-        maxY: Math.max(bounds.maxY, p.y),
-      }),
-      { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
-    );
   }
 
   function routePoint(progress) {
@@ -374,8 +524,18 @@
     }
   }
 
-  function drawMidTrack(projection) {
+  function drawMidTrack(marker, projection, time) {
+    drawProjectionGuide(projection);
+    drawHexField(marker, projection, time);
     drawProjectedTrackLayer(projection);
+  }
+
+  function drawProjectionGuide(projection) {
+    const cell = 6.95 * baseScale;
+    for (const p of trackGridCenters) {
+      if (!pointInConvexPolygon(p, projection.bounds)) continue;
+      drawCircleCell(p.x, p.y, cell, palette.gold, 1);
+    }
   }
 
   function drawProjectedTrackLayer(projection) {
@@ -387,22 +547,37 @@
   }
 
   function isProjectedTrackCell(point, projection) {
-    if (!isUpperOverlapArea(point, projection)) return false;
-    if (point.y < projection.upperLimit) return false;
+    if (!isInsideProjectionArea(point, projection)) return false;
     return isNearPath(point, projection.activeSegments, projection.trackWidth);
   }
 
-  function isUpperOverlapArea(point, projection) {
-    const boundary =
+  function isInsideProjectionArea(point, projection) {
+    if (!pointInConvexPolygon(point, projection.bounds)) return false;
+    const lowerBoundary =
       point.x <= projection.bottom.x
-        ? lineYAtX(projection.left, projection.bottom, point.x)
-        : lineYAtX(projection.bottom, projection.right, point.x);
-    return point.y <= boundary - 30 * baseScale;
+        ? lineYAtX(projection.fieldLeft, projection.bottom, point.x)
+        : lineYAtX(projection.bottom, projection.fieldRight, point.x);
+    return point.y <= lowerBoundary - 30 * baseScale;
   }
 
   function lineYAtX(a, b, x) {
     const t = (x - a.x) / Math.max(0.0001, b.x - a.x);
     return a.y + (b.y - a.y) * t;
+  }
+
+  function pointInConvexPolygon(point, vertices) {
+    let direction = 0;
+    for (let i = 0; i < vertices.length; i += 1) {
+      const a = vertices[i];
+      const b = vertices[(i + 1) % vertices.length];
+      const cross = (b.x - a.x) * (point.y - a.y) -
+        (b.y - a.y) * (point.x - a.x);
+      if (Math.abs(cross) < 0.001) continue;
+      const nextDirection = Math.sign(cross);
+      if (direction && direction !== nextDirection) return false;
+      direction = nextDirection;
+    }
+    return true;
   }
 
   function projectedRoutePoint(localProgress, anchorProgress, scale) {
@@ -458,16 +633,11 @@
   }
 
   function createProjection(activePath, cutPath) {
-    const field = lowerPlanePolygon();
-    const center = lowerPlaneCenter();
     return {
+      ...projectionGeometry,
       activeSegments: pathSegments(activePath),
       cutSegments: pathSegments(cutPath),
       trackWidth: 19 * baseScale,
-      upperLimit: center.y - 132 * baseScale,
-      left: field[0],
-      right: field[2],
-      bottom: field[3],
     };
   }
 
@@ -581,7 +751,9 @@
     }
     lastRenderTime = time;
 
-    const progress = (1 - (time * 0.000024) % 1) % 1;
+    if (animationStartTime === null) animationStartTime = time;
+    const elapsed = Math.max(0, time - animationStartTime);
+    const progress = (1 - (elapsed * 0.000024) % 1) % 1;
     const marker = routePoint(progress);
     const activePath = projectedRoutePath(progress, 0.16);
     const cutPath = offsetPath(activePath, 0, 54 * baseScale);
@@ -603,8 +775,7 @@
     ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, width, height);
 
-    drawHexField(marker, projection, time);
-    drawMidTrack(projection);
+    drawMidTrack(marker, projection, time);
     pixelCtx.clearRect(0, 0, width, height);
     drawTopTrack();
     drawMarker(marker, time);
@@ -682,6 +853,11 @@
     if (bottomLogo) bottomLogo.hidden = !settings.logo;
   }
 
+  function syncTrackSelectControl() {
+    if (trackSelectToggle) trackSelectToggle.checked = settings.trackSelect;
+    if (trackSelectors) trackSelectors.hidden = !settings.trackSelect || trackCatalog.length < 2;
+  }
+
   function syncMuteControl() {
     if (music) music.muted = settings.muted;
     if (muteToggle) muteToggle.setAttribute("aria-pressed", settings.muted ? "true" : "false");
@@ -718,6 +894,27 @@
       console.warn("Could not store logo preference.", error);
     }
     syncLogoControl();
+  }
+
+  function readStoredTrackSelect() {
+    try {
+      const value = window.localStorage.getItem("r4-wallpaper-track-select");
+      if (value === "0") return false;
+      if (value === "1") return true;
+    } catch (error) {
+      console.warn("Track selector preference unavailable.", error);
+    }
+    return false;
+  }
+
+  function setTrackSelectVisible(value) {
+    settings.trackSelect = Boolean(value);
+    try {
+      window.localStorage.setItem("r4-wallpaper-track-select", settings.trackSelect ? "1" : "0");
+    } catch (error) {
+      console.warn("Could not store track selector preference.", error);
+    }
+    syncTrackSelectControl();
   }
 
   function readStoredMuted() {
@@ -769,6 +966,17 @@
     setLogoVisible(logoToggle.checked);
   });
 
+  trackSelectToggle.addEventListener("change", () => {
+    setTrackSelectVisible(trackSelectToggle.checked);
+  });
+
+  for (const button of trackArrowButtons) {
+    button.addEventListener("click", () => {
+      const step = Number(button.dataset.trackStep) || 1;
+      setActiveTrack(activeTrackIndex + step);
+    });
+  }
+
   muteToggle.addEventListener("click", () => {
     setMuted(!settings.muted);
   });
@@ -776,7 +984,9 @@
   window.addEventListener("resize", resize);
   syncScaleControl();
   syncLogoControl();
+  syncTrackSelectControl();
   syncMuteControl();
+  syncTrackInfo();
   startMusic();
   resize();
   draw(0);

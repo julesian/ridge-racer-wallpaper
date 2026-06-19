@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>R4 Spiral Grid Wallpaper</title>
-    <link rel="stylesheet" href="styles.css?v=brand-tight-1">
+    <link rel="stylesheet" href="styles.css?v=track-image-frame-1">
   </head>
   <body>
     <canvas id="wallpaper" aria-label="R4 inspired animated track wallpaper"></canvas>
@@ -32,10 +32,28 @@
           </span>
         </span>
       </button>
+      <label class="menu-entry" for="trackSelectToggle">
+        <span class="menu-label">Track</span>
+        <span class="menu-switch">
+          <input id="trackSelectToggle" class="tick-input" type="checkbox">
+          <span class="embossed-box" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+        </span>
+      </label>
+    </div>
+
+    <div id="trackSelectors" class="track-selectors" hidden>
+      <button class="track-arrow track-arrow-left" type="button" data-track-step="-1" aria-label="Previous track">
+        <span aria-hidden="true"></span>
+      </button>
+      <button class="track-arrow track-arrow-right" type="button" data-track-step="1" aria-label="Next track">
+        <span aria-hidden="true"></span>
+      </button>
     </div>
 
     <div id="scaleStrip" class="scale-strip">
-      <div class="scale-label">Course name: Wonderhill [JPN] / Scale : <output id="scaleValue">100%</output></div>
+      <div class="scale-label">Course name: <output id="courseName">Wonderhill [JPN]</output> / Scale : <output id="scaleValue">100%</output></div>
       <div class="scale-ticks" role="group" aria-label="Wallpaper scale">
         <button class="scale-step" type="button" data-scale="0.25" aria-label="Scale 25%">
           <span class="embossed-box" aria-hidden="true">
@@ -84,7 +102,9 @@
       <source src="assets/spiral-ahead.mp3" type="audio/mpeg">
     </audio>
 
-    <script src="assets/track-vector/track-route-clean-trace.js"></script>
-    <script src="script.js?v=scale-always-1"></script>
+    <script src="assets/track-vector/wonderhill-route.js"></script>
+    <script src="assets/track-vector/shooting-hoops-route.js"></script>
+    <script src="assets/tracks.js"></script>
+  <script src="script.js?v=three-circle-yellow-cap-2"></script>
   </body>
 </html>

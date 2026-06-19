@@ -68,6 +68,8 @@ body::after {
 .wonderhill-logo {
   width: clamp(46px, 6.8vh, 72px);
   height: clamp(46px, 6.8vh, 72px);
+  box-sizing: border-box;
+  border: 3px solid #000000;
   object-fit: contain;
 }
 
@@ -141,6 +143,66 @@ body::after {
   transform: none;
 }
 
+.track-selectors[hidden] {
+  display: none;
+}
+
+.track-arrow {
+  position: fixed;
+  top: 54%;
+  display: grid;
+  place-items: center;
+  width: clamp(36px, 4vw, 54px);
+  height: clamp(42px, 7vh, 72px);
+  margin: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  z-index: 9;
+}
+
+.track-arrow-left {
+  left: max(
+    var(--r4-edge-x),
+    calc(var(--track-selector-center-x, 50vw) - var(--track-selector-distance, min(39vw, 430px)))
+  );
+}
+
+.track-arrow-right {
+  left: min(
+    calc(100vw - var(--r4-edge-x)),
+    calc(var(--track-selector-center-x, 50vw) + var(--track-selector-distance, min(39vw, 430px)))
+  );
+}
+
+.track-arrow span {
+  display: block;
+  width: 0;
+  height: 0;
+  border-top: clamp(5px, 1vw, 10px) solid transparent;
+  border-bottom: clamp(5px, 1vw, 10px) solid transparent;
+  filter: drop-shadow(2px 2px 0 rgba(255, 190, 0, 0.34));
+}
+
+.track-arrow-left span {
+  border-right: clamp(9px, 1.6vw, 16px) solid #080808;
+}
+
+.track-arrow-right span {
+  border-left: clamp(9px, 1.6vw, 16px) solid #080808;
+}
+
+.track-arrow:hover span,
+.track-arrow:focus-visible span {
+  filter: drop-shadow(3px 3px 0 rgba(255, 255, 255, 0.42));
+}
+
+.track-arrow:focus-visible {
+  outline: 0;
+}
+
 .menu-label,
 .menu-switch,
 .scale-label,
@@ -175,6 +237,10 @@ body::after {
 .scale-label output {
   font: inherit;
   margin-left: 0.35em;
+}
+
+#courseName {
+  margin-right: 0.35em;
 }
 
 .menu-switch,
