@@ -1,4 +1,4 @@
-# Ridge Racer R4 Map Wallpaper
+# Ridge Racer Type 4 Track Wallpaper
 
 https://github.com/user-attachments/assets/cc8a2561-fa78-460a-9b8c-61d0a002c759
 
@@ -70,3 +70,5 @@ Shooting HooPs can be rebuilt from its layout image with:
 ```text
 python tools/build_shooting_hoops_route.py assets/tracks/shooting-hoops-layout.png
 ```
+
+Codex take the Wheel
