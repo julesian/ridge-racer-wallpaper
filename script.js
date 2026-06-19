@@ -127,8 +127,8 @@
     id: "fallback",
     name: "Wonderhill",
     country: "JPN",
-    imageAsset: "wonderhill-remastered-borderless-orange-wave.png",
-    logoAsset: "assets/wonderhill-logo-square.png",
+    imageAsset: "assets/tracks/wonderhill/wonderhill-remastered-borderless-orange-wave.png",
+    logoAsset: "assets/tracks/wonderhill/wonderhill-logo-square.png",
     route: fallbackRoute,
     startGrid: {
       point: [388.5, 493.5],
