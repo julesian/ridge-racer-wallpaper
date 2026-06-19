@@ -305,17 +305,17 @@ def main() -> None:
         "waypoints": WAYPOINTS,
         "snapped_points": [[x + 0.5, y + 0.5] for x, y in snapped],
     }
-    (OUT / "track-route-clean-trace.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
-    (OUT / "track-route-clean-trace.js").write_text(
-        "window.TRACK_ROUTE_CLEAN_TRACE = "
+    (OUT / "wonderhill-route.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
+    (OUT / "wonderhill-route.js").write_text(
+        "window.TRACK_ROUTE_WONDERHILL = "
         + json.dumps({"width": im.width, "height": im.height, "points": rounded}, separators=(",", ":"))
         + ";\n",
         encoding="utf-8",
     )
-    (OUT / "track-route-clean-trace.svg").write_text(
+    (OUT / "wonderhill-route.svg").write_text(
         f'''<svg xmlns="http://www.w3.org/2000/svg" width="{im.width}" height="{im.height}" viewBox="0 0 {im.width} {im.height}">
   <title>Clean bitmap trace route</title>
-  <path id="track-route-clean-trace" d="{path_d(route)}" fill="none" stroke="#00AEEF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="wonderhill-route" d="{path_d(route)}" fill="none" stroke="#00AEEF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
 </svg>
 ''',
         encoding="utf-8",
