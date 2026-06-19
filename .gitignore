@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db
+
+# Local music/audio assets
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+*.m4a

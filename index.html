@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>R4 Spiral Grid Wallpaper</title>
+    <link rel="stylesheet" href="styles.css?v=brand-tight-1">
+  </head>
+  <body>
+    <canvas id="wallpaper" aria-label="R4 inspired animated track wallpaper"></canvas>
+    <div id="bottomLogo" class="bottom-brand" aria-label="Wonderhill and R4 logos">
+      <img class="wonderhill-logo" src="assets/wonderhill-logo-square.png" alt="Wonderhill" draggable="false">
+      <span class="brand-separator" aria-hidden="true"></span>
+      <img class="r4-logo" src="assets/r4-logo-tight.svg" alt="R4 logo" draggable="false">
+    </div>
+
+    <div class="upper-left-menu">
+      <label class="menu-entry" for="logoToggle">
+        <span class="menu-label">Logo</span>
+        <span class="menu-switch">
+          <input id="logoToggle" class="tick-input" type="checkbox" checked>
+          <span class="embossed-box" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+        </span>
+      </label>
+      <button id="muteToggle" class="menu-entry menu-action" type="button" title="Mute audio">
+        <span class="menu-label">Mute</span>
+        <span class="menu-switch" aria-hidden="true">
+          <span id="muteIndicator" class="embossed-box">
+            <span></span><span></span><span></span><span></span>
+          </span>
+        </span>
+      </button>
+    </div>
+
+    <div id="scaleStrip" class="scale-strip">
+      <div class="scale-label">Course name: Wonderhill [JPN] / Scale : <output id="scaleValue">100%</output></div>
+      <div class="scale-ticks" role="group" aria-label="Wallpaper scale">
+        <button class="scale-step" type="button" data-scale="0.25" aria-label="Scale 25%">
+          <span class="embossed-box" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+        </button>
+        <button class="scale-step" type="button" data-scale="0.5" aria-label="Scale 50%">
+          <span class="embossed-box" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+        </button>
+        <button class="scale-step" type="button" data-scale="0.75" aria-label="Scale 75%">
+          <span class="embossed-box" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+        </button>
+        <button class="scale-step" type="button" data-scale="1" aria-label="Scale 100%">
+          <span class="embossed-box" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+        </button>
+        <button class="scale-step" type="button" data-scale="1.25" aria-label="Scale 125%">
+          <span class="embossed-box" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+        </button>
+        <button class="scale-step" type="button" data-scale="1.5" aria-label="Scale 150%">
+          <span class="embossed-box" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+        </button>
+        <button class="scale-step" type="button" data-scale="1.75" aria-label="Scale 175%">
+          <span class="embossed-box" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+        </button>
+        <button class="scale-step" type="button" data-scale="2" aria-label="Scale 200%">
+          <span class="embossed-box" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <audio id="music" autoplay loop preload="auto">
+      <source src="assets/spiral-ahead.mp3" type="audio/mpeg">
+    </audio>
+
+    <script src="assets/track-vector/track-route-clean-trace.js"></script>
+    <script src="script.js?v=scale-always-1"></script>
+  </body>
+</html>
